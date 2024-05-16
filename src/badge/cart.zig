@@ -552,6 +552,8 @@ fn tone(
         .attack_volume_step = 0,
         .decay_volume_step = 0,
         .release_volume_step = 0,
+
+        .function = @enumFromInt(@intFromEnum(flags.function)),
     };
 
     const start_phase_step = @mulWithOverflow((1 << 32) / 44100, @as(u31, start_frequency));
@@ -577,7 +579,7 @@ fn tone(
         state.release_volume_step = @divTrunc(@as(i32, 0) - state.sustain_volume, state.release_duration);
     }
 
-    switch (flags.channel) {
+    switch (flags.function) {
         .pulse1, .pulse2 => {
             state.duty = switch (flags.duty_cycle) {
                 .@"1/8" => (1 << 32) / 8,
@@ -586,15 +588,10 @@ fn tone(
                 .@"3/4" => (3 << 32) / 4,
             };
         },
-        .triangle => {
-            state.duty = (1 << 32) / 2;
-        },
-        .noise => {
-            state.duty = (1 << 32) / 2;
-        },
+        else => {},
     }
 
-    audio.set_channel(@intFromEnum(flags.channel), state);
+    audio.set_channel(flags.channel, state);
 }
 
 fn read_flash(

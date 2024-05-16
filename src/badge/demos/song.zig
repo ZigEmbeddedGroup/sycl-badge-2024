@@ -186,7 +186,7 @@ pub export fn update() void {
         &channels_note_index,
         &channels_note_start,
         &song,
-    ) |channel_index, *note_index, *note_start, notes| {
+    ) |channel_idx, *note_index, *note_start, notes| {
         if (note_index.* > notes.len) continue;
         const next_note_time =
             note_start.* + if (note_index.* > 0) notes[note_index.* - 1].duration else 0.0;
@@ -195,12 +195,15 @@ pub export fn update() void {
             if (note_index.* > notes.len) continue;
             const note = notes[note_index.* - 1];
             note_start.* = next_note_time;
+            const vol: u32 = if (cart.controls.a) 25 else 50;
+            const fun: cart.ToneOptions.Flags.Function = if (cart.controls.a) .pulse1 else .triangle;
             cart.tone(.{
                 .frequency = @intFromFloat(note.frequency + 0.5),
                 .duration = @intFromFloat(@max(note.duration - 0.04, 0.0) * 60),
-                .volume = 100,
+                .volume = vol,
                 .flags = .{
-                    .channel = @enumFromInt(channel_index),
+                    .channel = @intCast(channel_idx),
+                    .function = fun,
                 },
             });
         }

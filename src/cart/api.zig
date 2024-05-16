@@ -382,10 +382,11 @@ pub inline fn vline(options: StraightLineOptions) void {
 
 pub const ToneOptions = struct {
     pub const Flags = packed struct(u32) {
-        pub const Channel = enum(u2) {
+        pub const Function = enum(u3) {
             pulse1,
             pulse2,
             triangle,
+            sine,
             noise,
         };
 
@@ -402,11 +403,12 @@ pub const ToneOptions = struct {
             right,
         };
 
-        channel: Channel,
+        channel: u8,
+        function: Function,
         /// `duty_cycle` is only used when `channel` is set to `pulse1` or `pulse2`
         duty_cycle: DutyCycle = .@"1/8",
         panning: Panning = .stereo,
-        padding: u26 = undefined,
+        padding: u17 = undefined,
     };
 
     frequency: u32,

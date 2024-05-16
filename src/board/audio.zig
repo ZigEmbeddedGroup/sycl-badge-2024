@@ -1,5 +1,13 @@
 pub const sample_buffer: *volatile [2][512]u16 = &sample_buffer_storage;
 
+pub const Function = enum(u3) {
+    pulse1,
+    pulse2,
+    triangle,
+    sine,
+    noise,
+};
+
 pub const Channel = struct {
     duty: u32,
     phase: u32,
@@ -19,6 +27,8 @@ pub const Channel = struct {
     attack_volume_step: i32,
     decay_volume_step: i32,
     release_volume_step: i32,
+
+    function: Function,
 };
 
 pub fn init() void {
@@ -209,10 +219,22 @@ pub fn mix() callconv(.C) void {
         inline for (&local_channels) |*channel| {
             if (channel.duty > 0) {
                 // generate sample;
-                if (channel.phase < channel.duty) {
-                    sample += channel.volume;
-                } else {
-                    sample -= channel.volume;
+                switch (channel.function) {
+                    .pulse1, .pulse2, .noise => {
+                        if (channel.phase < channel.duty) {
+                            sample += channel.volume;
+                        } else {
+                            sample -= channel.volume;
+                        }
+                    },
+                    .triangle => {
+                        sample += @intCast((@as(u64, channel.volume) * @as(u64, @abs(channel.phase >> 1))) >> 32);
+                    },
+                    .sine => {
+                        const vol = @as(f32, @floatFromInt(channel.volume));
+                        sample += @intFromFloat(vol * @sin(@as(f32, @floatFromInt(channel.phase))));
+                        // sample += @intFromFloat(10 * vol * @sin(2 * std.math.pi * @as(f32, @floatFromInt(channel.phase)) / @as(f32, @floatFromInt(std.math.maxInt(@TypeOf(channel.phase))))));
+                    },
                 }
                 // update
                 channel.phase +%= channel.phase_step;
@@ -245,7 +267,7 @@ pub fn mix() callconv(.C) void {
                 }
             }
         }
-        if (sample != 0) speaker_enable = .high;
+        speaker_enable = .high; // TODO this is weird
         out_sample.* = @intCast((sample >> 16) - std.math.minInt(i16));
     }
     channels.* = local_channels;
@@ -278,6 +300,8 @@ var channels_storage: [4]Channel = .{.{
     .attack_volume_step = 0,
     .decay_volume_step = 0,
     .release_volume_step = 0,
+
+    .function = .pulse1,
 }} ** 4;
 const channels: *volatile [4]Channel = &channels_storage;
 
